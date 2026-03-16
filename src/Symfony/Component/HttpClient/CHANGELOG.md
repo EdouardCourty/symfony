@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+8.2
+---
+
+ * Add `Cookie\Cookie` value object for structured cookie handling; validates names (RFC 2616 token) and values (RFC 6265 §4.1.1) with `getIllegalNameCharacters()` / `getIllegalValueCharacters()` public methods
+ * Add `Cookie\CookieStore` immutable cookie collection with `fromArray()`, `fromString()`, `extractFromResponse()`, `withCookie()`, `withoutCookie()`; implements `\Stringable`, `\Countable` and `\IteratorAggregate`
+ * Add `cookies` first-level request option (accepts `CookieStore`, `array`, or `string`); takes precedence over a `Cookie` header set via the `headers` option
+ * Add `HttpOptions::setCookies()` to set cookies via a `CookieStore`, an array, or a string
+
 8.1
 ---
 

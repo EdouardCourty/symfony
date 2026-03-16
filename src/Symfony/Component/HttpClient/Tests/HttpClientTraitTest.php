@@ -16,6 +16,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 use PHPUnit\Framework\Attributes\TestWith;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpClient\Cookie\CookieStore;
 use Symfony\Component\HttpClient\Exception\InvalidArgumentException;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpClient\HttpClientTrait;
@@ -391,5 +392,52 @@ b'])]
         $fingerprint = new \stdClass();
 
         $this->normalizePeerFingerprint($fingerprint);
+    }
+
+    public function testCookiesOptionWithArray()
+    {
+        [, $options] = self::prepareRequest('GET', 'http://example.com', ['cookies' => ['flavor' => 'chocolate', 'size' => 'medium']], HttpClientInterface::OPTIONS_DEFAULTS);
+        $this->assertSame(['Cookie: flavor=chocolate; size=medium'], $options['normalized_headers']['cookie']);
+    }
+
+    public function testCookiesOptionWithString()
+    {
+        [, $options] = self::prepareRequest('GET', 'http://example.com', ['cookies' => 'flavor=chocolate; size=medium'], HttpClientInterface::OPTIONS_DEFAULTS);
+        $this->assertSame(['Cookie: flavor=chocolate; size=medium'], $options['normalized_headers']['cookie']);
+    }
+
+    public function testCookiesOptionWithCookieStore()
+    {
+        $store = CookieStore::fromArray(['flavor' => 'chocolate']);
+        [, $options] = self::prepareRequest('GET', 'http://example.com', ['cookies' => $store], HttpClientInterface::OPTIONS_DEFAULTS);
+        $this->assertSame(['Cookie: flavor=chocolate'], $options['normalized_headers']['cookie']);
+    }
+
+    public function testCookiesOptionOverridesHeader()
+    {
+        [, $options] = self::prepareRequest('GET', 'http://example.com', [
+            'headers' => ['Cookie' => 'old=value'],
+            'cookies' => ['new' => 'value'],
+        ], HttpClientInterface::OPTIONS_DEFAULTS);
+        $this->assertSame(['Cookie: new=value'], $options['normalized_headers']['cookie']);
+    }
+
+    public function testCookiesOptionEmptyArrayDoesNotSetHeader()
+    {
+        [, $options] = self::prepareRequest('GET', 'http://example.com', ['cookies' => []], HttpClientInterface::OPTIONS_DEFAULTS);
+        $this->assertArrayNotHasKey('cookie', $options['normalized_headers']);
+    }
+
+    public function testCookiesOptionIsRemovedAfterProcessing()
+    {
+        [, $options] = self::prepareRequest('GET', 'http://example.com', ['cookies' => ['a' => 'b']], HttpClientInterface::OPTIONS_DEFAULTS);
+        $this->assertArrayNotHasKey('cookies', $options);
+    }
+
+    public function testInvalidCookiesOptionType()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Option "cookies" must be a string, an array, or a');
+        self::prepareRequest('GET', 'http://example.com', ['cookies' => new \stdClass()], HttpClientInterface::OPTIONS_DEFAULTS);
     }
 }
